@@ -10,6 +10,7 @@ pipeline {
     DEPLOY_REPO          = 'github.com/amamba-io/amamba-examples.git'
     DEPLOY_CREDENTIAL_ID = '<deploy-credential-id>'
     DEPLOY_PATH          = 'plain-yaml'
+    DOCKERFILE_ROOT      = 'guestbook-go'
     DOCKER_REPO          = 'docker.io/amambadev/guestbook'
     DOCKER_CREDENTIAL_ID = '<docker-credential-id>'
   }
@@ -26,19 +27,24 @@ pipeline {
     }
     stage('build & push') {
       steps {
-        container('maven') {
+        container('base') {
           withCredentials([usernamePassword(passwordVariable:'PASS',usernameVariable:'USER',credentialsId:"${DOCKER_CREDENTIAL_ID}")]) {
             sh 'docker login ${DOCKER_REPO} -u $USER -p $PASS'
-            sh 'docker build -f Dockerfile -t ${DOCKER_REPO}:${COMMIT_ID} .'
+            sh 'docker build -f Dockerfile -t ${DOCKER_REPO}:${COMMIT_ID} ${DOCKERFILE_ROOT}'
             sh 'docker push ${DOCKER_REPO}:${COMMIT_ID}'
           }
         }
       }
     }
     stage('deploy') {
+      environment {
+        DOCKER_TAG = "${COMMIT_ID}"
+      }
       steps {
-        dir('deploy') {
-            git(branch: "main", url: "${DEPLOY_SOURCE_URL}", credentialsId: "${DEPLOY_CREDENTIAL_ID}")
+        container('base'){
+          dir('deploy') {
+            git(branch: "main", url: "https://${DEPLOY_REPO}", credentialsId: "${DEPLOY_CREDENTIAL_ID}")
+            sh 'yum install -y gettext'
             sh 'envsubst < pipelines/templates/guestbook-ui-deployment.yaml.tmpl > plain-yaml/guestbook-ui-deployment.yaml'
             withCredentials([usernamePassword(passwordVariable:'PASS', usernameVariable:'USER', credentialsId:"${DEPLOY_CREDENTIAL_ID}")]) {
             sh '''
@@ -46,10 +52,11 @@ pipeline {
                 git config user.email "robot@amamba.io"
 
                 git add .
-                git commit -m "Bump image with ${DOCKER_REPO}:${COMMIT_ID}"
+                git commit -m "Bump image with ${DOCKER_REPO}:${DOCKER_TAG}"
                 git push "https://${USER}:${PASS}@${DEPLOY_REPO}"
-                '''
+            '''
             }
+          }
         }
       }
     }
