@@ -44,18 +44,22 @@ pipeline {
         container('base'){
           dir('deploy') {
             git(branch: "main", url: "https://${DEPLOY_REPO}", credentialsId: "${DEPLOY_CREDENTIAL_ID}")
-            sh 'yum install -y gettext'
-            sh 'envsubst < pipelines/templates/guestbook-ui-deployment.yaml.tmpl > plain-yaml/guestbook-ui-deployment.yaml'
+            sh '''
+                # install kustomize
+                cd kustomize-guestbook/
+                curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+                ./kustomize edit set image ${DOCKER_REPO}:latest=${DOCKER_REPO}:${DOCKER_TAG}
+            '''
             withCredentials([usernamePassword(passwordVariable:'PASS', usernameVariable:'USER', credentialsId:"${DEPLOY_CREDENTIAL_ID}")]) {
-                sh '''
-                    git config user.name "robot"
-                    git config user.email "robot@amamba.io"
+            sh '''
+                git config user.name "robot"
+                git config user.email "robot@amamba.io"
 
-                    git add .
-                    git commit -m "Bump image with ${DOCKER_REPO}:${DOCKER_TAG}"
-                    git push "https://${USER}:${PASS}@${DEPLOY_REPO}"
-                '''
-                }
+                git add .
+                git commit -m "Bump image with ${DOCKER_REPO}:${DOCKER_TAG}"
+                git push "https://${USER}:${PASS}@${DEPLOY_REPO}"
+            '''
+            }
           }
         }
       }
