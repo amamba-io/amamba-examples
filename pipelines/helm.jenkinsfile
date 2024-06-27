@@ -9,7 +9,7 @@ pipeline {
     SOURCE_CREDENTIAL_ID = '<source-credential-id>'
     DEPLOY_REPO          = 'github.com/amamba-io/amamba-examples.git'
     DEPLOY_CREDENTIAL_ID = '<deploy-credential-id>'
-    DEPLOY_PATH          = 'plain-yaml'
+    DEPLOY_PATH          = 'helm-guestbook/values-production.yaml'
     DOCKERFILE_ROOT      = 'guestbook-go'
     DOCKER_REPO          = 'docker.io/amambadev/guestbook'
     DOCKER_CREDENTIAL_ID = '<docker-credential-id>'
@@ -46,7 +46,7 @@ pipeline {
             git(branch: "main", url: "https://${DEPLOY_REPO}", credentialsId: "${DEPLOY_CREDENTIAL_ID}")
             sh '''
                 yum install -y yq
-                yq -i ".image.tag=123" helm-guestbook/values-production.yaml
+                yq -i ".image.tag=${DOCKER_TAG}" ${DEPLOY_PATH}
             '''
             withCredentials([usernamePassword(passwordVariable:'PASS', usernameVariable:'USER', credentialsId:"${DEPLOY_CREDENTIAL_ID}")]) {
             sh '''
