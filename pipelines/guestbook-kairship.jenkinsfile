@@ -1,0 +1,83 @@
+pipeline {
+  agent {
+    node {
+      label 'base'
+    }
+  }
+  stages {
+    stage('clone code') {
+      agent none
+      steps {
+        container('base') {
+          git(url: 'https://github.com/amamba-io/amamba-examples.git'， branch: 'main'， changelog: true， poll: false)
+        }
+      }
+    }
+    stage('build & push') {
+      agent none
+      steps {
+        container('base') {
+          withCredentials([usernamePassword(credentialsId: 'harbor'， passwordVariable: 'PASS'， usernameVariable: 'USER'，)]) {
+            sh '''
+              docker login $IMAGE_REPOSITORY -u $USER -p $PASS
+              docker build -f Dockerfile -t $IMG  .
+              docker push $IMG
+				    '''
+          }
+        }
+      }
+    }
+    stage('create') {
+      agent none
+      steps {
+        container('base') {
+          script {
+            withCredentials([file(credentialsId: 'k-amamba-kubeconfig'， variable: 'KUBECONFIG')]) {
+              sh '''
+                # DeployApplication
+                kubectl apply -f $FILE_PATH -n $NAMESPACE --kubeconfig=$KUBECONFIG
+              '''
+            }
+          }
+        }
+      }
+    }
+    stage('deploy') {
+      agent none
+      steps {
+        container('base') {
+          withCredentials([file(credentialsId: 'k-amamba-kubeconfig'， variable: 'KUBECONFIG')]) {
+            sh '''
+              set_image(){
+                kubectl set image $RESOURCE $CONTAINER=$IMG -n $NAMESPACE --kubeconfig=$KUBECONFIG
+              }
+              result=$(set_image)
+              if [[ "$(echo $result | grep updated)" != ""  ]]; then
+				echo "UPDATED IMAGE"
+              else
+				echo "no changes detected $RESOURCE， we need to restart to pull the newly build image"
+				kubectl rollout restart $RESOURCE -n $NAMESPACE --kubeconfig=$KUBECONFIG
+				set_image
+              fi
+              kubectl patch $RESOURCE -p '{"spec":{"replicas":1}}' -n NAMESPACE --kubeconfig=$KUBECONFIG
+            '''
+          }
+        }
+      }
+    }
+  }
+  environment {
+  // 参数仅供参考
+      RESOURCE="deployment/guestbook-ui"
+      NAMESPACE="test-amamba"
+      FILE_PATH="guestbook-kariship"
+      IMAGE_REPOSITORY="$IMAGE_REPOSITORY"
+      IMAGE_PROJECT="amamba"
+      IMAGE_NAME="test"
+      CONTAINER="guestbook-ui"
+      IMG = """${sh(
+        returnStdout: true,
+      	script: '[ -z $IMAGE_TAG ] && echo "$IMAGE_REPOSITORY/$IMAGE_PROJECT/$IMAGE_NAME:latest" || echo "$IMAGE_REPOSITORY/$IMAGE_PROJECT/$IMAGE_NAME:$IMAGE_TAG"'
+      )}"""
+  }
+}
