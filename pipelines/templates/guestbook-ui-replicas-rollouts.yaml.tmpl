@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: guestbook-ui
+spec:
+  replicas: 10
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: guestbook-ui
+  template:
+    metadata:
+      labels:
+        app: guestbook-ui
+    spec:
+      containers:
+      - image: ${DOCKER_REPO}:${DOCKER_TAG}
+        name: guestbook-ui
+        ports:
+        - containerPort: 80
+  strategy:
+    canary:
+      steps:
+        - setWeight: 5
+        - pause:
+            duration: 10m
+        - setWeight: 50
+        - pause:
+            duration: 10m

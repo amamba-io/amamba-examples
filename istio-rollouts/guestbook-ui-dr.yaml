@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: guestbook-ui
+spec:
+  host: guestbook-ui
+  subsets:
+    - labels:
+        app: guestbook-ui
+      name: canary
+    - labels:
+        app: guestbook-ui
+      name: stable
+  trafficPolicy:
+    connectionPool:
+      http:
+        maxRetries: 3

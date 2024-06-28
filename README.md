@@ -14,3 +14,6 @@ to explore ArgoCD and GitOps!
 | [helm-guestbook](helm-guestbook/) | The guestbook app as a Helm chart |
 | [kustomize-guestbook](kustomize-guestbook/) | The guestbook app as a Kustomize 2 app |
 | [helm-dependency](helm-dependency/) | Demonstrates how to customize an OTS (off-the-shelf) helm chart from an upstream repo |
+| [replicas-rollouts](replicas-rollouts/) | Demonstrates how to canary rollout by replicas |
+| [istio-rollouts](istio-rollouts/) | Demonstrates how to canary rollout by istio |
+| [blue-green](blue-green/) | Demonstrates how to blue-green rollout |

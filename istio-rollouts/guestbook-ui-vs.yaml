@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: guestbook-ui
+spec:
+  gateways:
+    - gateway
+  hosts:
+    - "*"
+  http:
+    - name: guestbook-ui
+      route:
+        - destination:
+            host: guestbook-ui
+            port:
+              number: 80
+            subset: stable
+          weight: 100
+        - destination:
+            host: guestbook-ui
+            port:
+              number: 80
+            subset: canary
+          weight: 0
