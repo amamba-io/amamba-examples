@@ -1,0 +1,35 @@
+apiVersion: policy.karmada.io/v1alpha1
+kind: PropagationPolicy
+metadata:
+  name: guestbook
+spec:
+  resourceSelectors:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: guestbook-ui
+    - apiVersion: v1
+      kind: Service
+      name: guestbook-ui
+  placement:
+    clusterAffinity:
+      clusterNames:
+        - kpanda-global-cluster
+        - gwt-68
+        - zxw-dev
+    replicaScheduling:
+      replicaSchedulingType: Divided
+      replicaDivisionPreference: Weighted
+      weightPreference:
+        staticWeightList:
+          - targetCluster:
+              clusterNames:
+                - kpanda-global-cluster
+            weight: 1
+          - targetCluster:
+              clusterNames:
+                - gwt-68
+            weight: 1
+          - targetCluster:
+              clusterNames:
+                - zxw-dev
+            weight: 1
